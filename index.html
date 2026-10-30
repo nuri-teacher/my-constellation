@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>나만의 별자리 탐색하기 - 가을 밤하늘 (메이사 추가 v14)</title>
+<title>나만의 별자리 탐색하기 - 가을 밤하늘 (이름·소개글까지 확인 v22)</title>
 
 <script>
 /* =====================================================================
@@ -31,6 +31,16 @@ const CONFIG = {
 
   // [설정] 탐사 미션을 모두 성공해야 ②~④ 메뉴가 열리게 할지 (true / false)
   lockUntilMissionsDone: true,
+
+  // [열쇠 코드] 각 단계에 들어가기 전에 입력해야 하는 코드 (선생님이 그 단계로 넘어갈 때 칠판에 띄워 주세요)
+  //  숫자는 메뉴 번호예요. 코드를 비워 두면("") 그 단계는 코드 없이 열려요.
+  //  영어 대·소문자와 띄어쓰기는 구분하지 않아요. (ORION = orion = O R I O N)
+  //  ※ 코드를 넣은 단계보다 뒤에 있는 단계도 그 코드를 입력해야 열려요. (⑤ 별자리 전시회는 galleryAlwaysOpen 설정을 따라요)
+  stageCodes: {
+    2: "ORION",   // ② 나의 별 줍기
+    3: "",        // ③ 별 들여다보기
+    4: "SPACE"    // ④ 나만의 별자리
+  },
 
   // [설정] ② 나의 별 줍기에서 학번·이름을 적는 칸을 보여 줄지 (true / false)
   //  적은 학번·이름은 이 화면에만 잠시 기억되고(새로 고침하면 사라짐), 저장한 별자리 그림과
@@ -62,7 +72,7 @@ const CONFIG = {
     { key: "winter", label: "겨울", emoji: "❄️", date: "2027-01-15", time: "21:00" }
   ],
   // [설정] 처음 열었을 때 보여 줄 계절 (spring / summer / autumn / winter)
-  defaultSeason: "autumn",
+  defaultSeason: "spring",
 
   // [숫자] 지평선 위로 이 높이(도)보다 낮은 별은 화면에서 뺍니다.
   minAltitude: 3,
@@ -127,6 +137,9 @@ const CONFIG = {
       auto: { color: "적색" },
       hint: "별을 눌러 별의 색깔을 하나씩 확인해 보세요." }
   ],
+
+  // [안내] ④ 나만의 별자리의 소개글 칸에서 '비교 결과 다시 보기' 아래에 보이는 꼭 지킬 점 (비워 두면 숨겨져요)
+  introRequirement: "별자리 소개글을 작성할 때는 반드시 우리가 배웠던 개념들(겉보기 등급, 절대 등급, 별까지의 거리, 표면 온도와 색깔) 중 일부를 포함해서 적어주세요!",
 
   // [문제] ④ 나만의 별자리의 소개글 도움 문장 (누르면 소개글 칸에 들어가요. ___ 부분을 학생이 채워요)
   introStarters: [
@@ -266,6 +279,7 @@ const CONFIG = {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
   *, *::before, *::after { box-sizing: inherit; }
+  [hidden] { display: none !important; }   /* 숨긴 요소는 어떤 모양 설정보다 우선해서 숨기기 */
   html { font-size: var(--base); -webkit-text-size-adjust: 100%; font-synthesis: none; }
   body {
     margin: 0; min-height: 100vh;
@@ -527,6 +541,17 @@ const CONFIG = {
   .complete { text-align: center; border-color: var(--gold); }
   .complete .big { font-size: 2.6rem; line-height: 1.2; }
   .complete p { margin: .3rem 0 .8rem; font-weight: 800; font-size: 1.1rem; }
+  .complete .complete-sub { font-size: .95rem; color: var(--muted); margin-top: -.3rem; }
+  .complete .complete-sub b { color: var(--gold); font-weight: 400; }
+  .code-dialog { position: fixed; inset: 0; z-index: 70; display: flex; align-items: center; justify-content: center; padding: 1rem; background: rgba(2, 4, 18, 0.82); }
+  .code-dialog[hidden] { display: none; }
+  .code-box { width: min(100%, 30rem); text-align: center; display: grid; gap: .7rem; animation: fadeIn .3s ease; }
+  .code-icon { font-size: 3rem; line-height: 1; animation: twinkle 2.6s ease-in-out infinite; }
+  .code-box h3 { margin: 0; font-size: 1.4rem; color: var(--gold); }
+  .code-desc { margin: 0; color: var(--muted); }
+  .code-box input { text-align: center; font-size: 1.6rem; letter-spacing: .15em; min-height: 3.4rem; }
+  .code-msg { margin: 0; min-height: 1.4em; font-weight: 700; color: var(--warn); }
+  .code-msg.ok { color: var(--ok); }
 
   /* ---------- 3단계 ---------- */
   .count { font-size: 1.2rem; font-weight: 800; }
@@ -552,6 +577,35 @@ const CONFIG = {
   }
   .season-btn:focus-visible { outline: 3px solid var(--sky); outline-offset: 3px; }
   @media (max-width: 480px) { .season-bar { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+  .next-step { display: grid; gap: .6rem; }
+  .ns-wait { color: var(--muted); font-size: 1rem; display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
+  .ns-wait[hidden] { display: none; }
+  .ns-head { margin: 0; width: 100%; color: var(--chalk); }
+  .ns-list { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: .4rem; width: 100%; }
+  .ns-list li { display: inline-flex; align-items: center; gap: .35rem; padding: .3rem .75rem; border-radius: 2rem; border: 1px dashed var(--rule); font-size: .92rem; }
+  .ns-list li span { color: rgba(182, 192, 230, 0.6); }
+  .ns-list li.ok { border-style: solid; border-color: var(--gold); color: var(--chalk); }
+  .ns-list li.ok span { color: var(--gold); }
+  .ns-wait .dots { letter-spacing: .15em; font-size: 1.3rem; color: rgba(182, 192, 230, 0.35); }
+  .ns-wait .dots b { color: var(--gold); font-weight: 400; text-shadow: 0 0 10px rgba(247, 207, 94, 0.7); }
+  .ns-ready { animation: fadeIn .4s ease; }
+  .ns-title { margin: 0 0 .7rem; font-size: 1.15rem; color: var(--gold); }
+  .next-step.ready { border-color: var(--gold); box-shadow: 0 0 30px rgba(247, 207, 94, 0.25); }
+  .next-step .btn-row .btn { flex: 1 1 13rem; font-size: 1.05rem; min-height: 3.1rem; }
+  .cmp-prog { margin: -.2rem 0 .8rem; color: var(--muted); display: flex; flex-wrap: wrap; align-items: center; gap: .3rem .8rem; }
+  .cmp-prog .dots { font-size: 1.3rem; letter-spacing: .12em; color: rgba(182, 192, 230, 0.35); }
+  .cmp-prog .dots b { color: var(--gold); font-weight: 400; text-shadow: 0 0 10px rgba(247, 207, 94, 0.7); }
+  .cmp-prog.done { color: var(--ok); }
+  .q.done { border-color: var(--gold); }
+  .cmp-note { margin: .6rem 0 0; color: var(--muted); font-size: .92rem; }
+  .cmp-note:empty { display: none; }
+  .save-note { margin: .55rem 0 0; font-size: .92rem; color: var(--warn); line-height: 1.55; }
+  .save-note:empty { display: none; }
+  .save-note b { color: var(--gold); font-weight: 400; }
+  .save-note .save-list { margin-bottom: .4rem; }
+  .save-note .save-list li { color: var(--muted); }
+  .save-note .save-list li.ok { color: var(--chalk); }
+  .save-left { margin: 0; }
   .notice { color: var(--warn); font-weight: 700; min-height: 1.5em; margin: .4rem 0; }
 
   /* ---------- 4단계 ---------- */
@@ -588,6 +642,10 @@ const CONFIG = {
   .recall summary { cursor: pointer; min-height: 2.4rem; display: flex; align-items: center; color: var(--sky); }
   .recall ul { margin: .2rem 0 .5rem; padding-left: 1.2rem; display: grid; gap: .25rem; font-size: .92rem; }
   .recall li b { color: var(--gold); font-weight: 400; }
+  .intro-must { margin: 0 0 .7rem; padding: .7rem .9rem .7rem 2.6rem; position: relative; border-radius: .8rem;
+    border: 1px solid var(--gold); background: rgba(247, 207, 94, 0.1); color: var(--chalk); font-size: .95rem; line-height: 1.6; }
+  .intro-must::before { content: "✏️"; position: absolute; left: .8rem; top: .65rem; }
+  .intro-must:empty { display: none; }
   .starters { display: flex; flex-wrap: wrap; gap: .45rem; margin-bottom: .6rem; }
   .starter { font: inherit; font-size: .85rem; text-align: left; line-height: 1.35; min-height: 2.4rem; padding: .35rem .75rem; border-radius: .8rem; border: 1px dashed var(--gold); background: rgba(247, 207, 94, 0.06); color: var(--chalk); cursor: pointer; }
   .starter:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
@@ -684,8 +742,9 @@ const CONFIG = {
         </div>
         <div class="glass complete" id="complete" hidden>
           <div class="big">🌟🎉🌟</div>
-          <p>탐색 미션을 모두 성공했어요!</p>
-          <button class="btn primary" id="toPick">별 고르러 가기</button>
+          <p>탐사 미션을 모두 성공했어요!</p>
+          <p class="complete-sub" id="completeSub">선생님이 알려 주시는 <b>열쇠 코드</b>를 입력하면 다음 단계가 열려요.</p>
+          <button class="btn primary" id="toPick">🔑 열쇠 코드 입력하고 별 고르러 가기</button>
         </div>
       </div>
     </div>
@@ -697,12 +756,14 @@ const CONFIG = {
     <p class="lead">만들고 싶은 별자리 모양을 떠올리고, 그 모양을 만들 수 있는 <b>내 마음에 드는 별</b>을 눌러 고르세요. 한 번 더 누르면 선택이 취소돼요. 아래 <b>계절 버튼</b>을 누르면 그 계절 밤하늘로 바뀌어요.</p>
     <div class="season-bar" id="seasonBar" role="group" aria-label="계절 고르기"></div>
     <div class="work">
+      <div class="col">
       <div class="sky-wrap">
         <canvas class="sky" id="sky2" aria-label="밤하늘. 별을 눌러 별자리에 쓸 별을 고릅니다."></canvas>
         <div class="sky-bar">
           <span class="hint">고른 별에는 금색 고리와 번호가 생겨요.</span>
           <button class="btn small names-toggle">별 이름 숨기기</button>
         </div>
+      </div>
       </div>
       <div class="col">
         <div class="glass" id="studentBox">
@@ -718,6 +779,16 @@ const CONFIG = {
           <label class="field" for="shapeIdea">내가 만들 별자리 모양</label>
           <input type="text" id="shapeIdea" maxlength="20" placeholder="예: 고양이, 기타, 우주선" autocomplete="off">
         </div>
+        <div class="glass next-step" id="nextStep" aria-live="polite">
+        <div class="ns-wait" id="nsWait"></div>
+        <div class="ns-ready" id="nsReady" hidden>
+          <p class="ns-title" id="nsTitle"></p>
+          <div class="btn-row">
+            <button class="btn" id="pickMore" type="button">별 더 고르기</button>
+            <button class="btn primary" id="goLook" type="button">별 들여다보러 가기</button>
+          </div>
+        </div>
+      </div>
         <div class="glass">
           <div class="count" id="count2"></div>
           <div class="chips" id="chips2"></div>
@@ -743,12 +814,14 @@ const CONFIG = {
       <div class="cards" id="cards"></div>
       <div class="compare">
         <h2 class="page-title" style="font-size:1.25rem">내가 고른 별 비교하기</h2>
+        <p class="cmp-prog" id="cmpProg"></p>
         <div class="q-list" id="questions"></div>
       </div>
       <div class="btn-row" style="margin-top:1.2rem; max-width: 40rem;">
         <button class="btn go-pick">별 다시 고르기</button>
         <button class="btn primary" id="toMake">별자리 만들러 가기</button>
       </div>
+      <p class="cmp-note" id="cmpNote"></p>
     </div>
   </section>
 
@@ -788,12 +861,14 @@ const CONFIG = {
               <summary>내가 고른 별 비교 결과 다시 보기</summary>
               <ul id="recallList"></ul>
             </details>
+            <p class="intro-must" id="introMust"></p>
             <div class="starters" id="starters"></div>
             <textarea id="cIntro" maxlength="300" rows="6" placeholder="예: 제 별자리 '꿈꾸는 고양이자리'는 잠든 고양이 모양을 떠올리며 만들었습니다. 이 별자리에서 가장 밝게 보이는 별은 ..."></textarea>
             <div class="intro-count" id="introCount" aria-live="polite"></div>
             <div class="btn-row" style="margin-top:.8rem">
               <button class="btn primary" id="savePng">그림으로 저장하기</button>
             </div>
+            <p class="save-note" id="saveNote" aria-live="polite"></p>
           </div>
           <div class="glass preview" id="previewBox" hidden>
             <h3>저장한 그림</h3>
@@ -843,6 +918,19 @@ const CONFIG = {
   <button class="btn lb-nav lb-prev" id="lightboxPrev" type="button" aria-label="이전 그림">‹</button>
   <button class="btn lb-nav lb-next" id="lightboxNext" type="button" aria-label="다음 그림">›</button>
   <button class="btn primary lightbox-close" id="lightboxClose" type="button">닫기 ✕</button>
+</div>
+<div class="code-dialog" id="codeDialog" hidden role="dialog" aria-modal="true" aria-labelledby="codeTitle">
+  <div class="glass code-box">
+    <div class="code-icon" aria-hidden="true">🔑</div>
+    <h3 id="codeTitle">열쇠 코드를 입력하세요</h3>
+    <p class="code-desc" id="codeDesc"></p>
+    <input type="text" id="codeInput" maxlength="20" autocomplete="off" autocapitalize="characters" spellcheck="false" enterkeyhint="done" aria-label="열쇠 코드">
+    <p class="code-msg" id="codeMsg" aria-live="polite"></p>
+    <div class="btn-row">
+      <button class="btn" id="codeCancel" type="button">닫기</button>
+      <button class="btn primary" id="codeOk" type="button">열기</button>
+    </div>
+  </div>
 </div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <footer class="copyright" id="copyright"></footer>
@@ -1096,7 +1184,34 @@ const CONFIG = {
   }));
   const isSel = id => state.selected.includes(id);
   const allSolved = () => state.solved.every(Boolean);
-  const isLocked = n => CONFIG.lockUntilMissionsDone && n >= 2 && !allSolved() && !(n === 5 && CONFIG.galleryAlwaysOpen);
+  const galleryFree = n => n === 5 && CONFIG.galleryAlwaysOpen;
+  const missionLocked = n => CONFIG.lockUntilMissionsDone && n >= 2 && !allSolved() && !galleryFree(n);
+  // 열쇠 코드: n번 단계까지 가는 길에 아직 입력하지 않은 코드가 있으면 잠김 (가장 앞 단계 번호를 돌려줌)
+  state.codeOk = {};
+  const codeOf = k => String((CONFIG.stageCodes || {})[k] || "").trim();
+  const missingCode = n => {
+    if (galleryFree(n)) return 0;
+    for (let k = 2; k <= n; k++) if (codeOf(k) && !state.codeOk[k]) return k;
+    return 0;
+  };
+  // ③·④로 가려면: 학번·이름·별자리 모양을 적고, 별을 최소 개수 이상 골라야 함
+  const fieldVal = id => { const el = document.getElementById(id); return el ? el.value.trim() : ""; };
+  function missingPrep() {
+    const miss = [];
+    if (CONFIG.askStudentInfo && !fieldVal("stuId")) miss.push("학번");
+    if (CONFIG.askStudentInfo && !fieldVal("stuName")) miss.push("이름");
+    if (!fieldVal("shapeIdea")) miss.push("별자리 모양");
+    if (state.selected.length < CONFIG.minStars) miss.push(`별 ${CONFIG.minStars}개 이상`);
+    return miss;
+  }
+  const pickLocked = n => (n === 3 || n === 4) && missingPrep().length > 0;
+  // ④로 가려면: ③의 '내가 고른 별 비교하기'를 모두 확인해야 함 (고른 별이 바뀌면 다시 확인)
+  state.revealed = {};
+  const cmpKey = () => state.season + ":" + state.selected.slice().sort((a, b) => a - b).join(",");
+  const revealedSet = () => (state.revealed[cmpKey()] = state.revealed[cmpKey()] || new Set());
+  const compareDone = () => revealedSet().size >= CONFIG.compareQuestions.length;
+  const compareLocked = n => n === 4 && !compareDone();
+  const isLocked = n => missionLocked(n) || pickLocked(n) || compareLocked(n) || missingCode(n) > 0;
 
   /* ---------- 숫자 표시 ---------- */
   const fmtMag = v => (v > 0 ? "+" : "") + v.toFixed(2);
@@ -1496,7 +1611,7 @@ const CONFIG = {
       renderProgress();
       if (allSolved()) {
         updateTabs(true);
-        toast("🌟 모든 미션 성공! 다음 단계가 열렸어요");
+        toast(missingCode(2) ? "🌟 모든 미션 성공! 열쇠 코드를 입력하면 다음 단계가 열려요" : "🌟 모든 미션 성공! 다음 단계가 열렸어요");
         document.getElementById("complete").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
       } else {
         toast("🌟 미션 " + (i + 1) + " 성공!");
@@ -1519,6 +1634,9 @@ const CONFIG = {
       if (k >= before && k < done) el.classList.add("pop");
     });
     document.getElementById("complete").hidden = !allSolved();
+    const needNext = missingCode(2) > 0;
+    document.getElementById("completeSub").hidden = !needNext;
+    document.getElementById("toPick").textContent = needNext ? "🔑 열쇠 코드 입력하고 별 고르러 가기" : "별 고르러 가기";
   }
   function renderP1() { renderP1Info(); renderProgress(); }
   document.getElementById("toPick").addEventListener("click", () => go(2));
@@ -1560,6 +1678,25 @@ const CONFIG = {
   }
   function renderP2() {
     const n = state.selected.length;
+    const miss = missingPrep();
+    const ready = miss.length === 0;
+    const ns = document.getElementById("nextStep");
+    ns.classList.toggle("ready", ready);
+    document.getElementById("nsReady").hidden = !ready;
+    document.getElementById("nsWait").hidden = ready;
+    const items = [];
+    if (CONFIG.askStudentInfo) items.push(["학번", !!fieldVal("stuId")], ["이름", !!fieldVal("stuName")]);
+    items.push(["별자리 모양", !!fieldVal("shapeIdea")], [`별 ${CONFIG.minStars}개 이상 (지금 ${n}개)`, n >= CONFIG.minStars]);
+    document.getElementById("nsWait").innerHTML =
+      `<p class="ns-head">다음 단계로 가려면 아래를 모두 채워요.</p>
+       <ul class="ns-list">${items.map(([t, ok]) => `<li class="${ok ? "ok" : ""}"><span aria-hidden="true">${ok ? "✔" : "☆"}</span>${esc(t)}</li>`).join("")}</ul>`;
+    document.getElementById("nsTitle").textContent = `🌟 별을 ${n}개 골랐어요! 별을 더 고를까요, 아니면 고른 별을 탐구해볼까요?`;
+    if (ready && !state.pickReady) {                       // 방금 최소 개수를 채웠을 때
+      toast(`🌟 준비 완료! 다음에 할 일을 골라요`);
+      tabs.forEach(t => { if (Number(t.dataset.page) === 3) { t.classList.remove("unlocked-now"); void t.offsetWidth; t.classList.add("unlocked-now"); } });
+    }
+    state.pickReady = ready;
+    updateTabs(false);
     document.getElementById("count2").innerHTML =
       `고른 별 <b>${n}</b>개 <span class="muted" style="font-size:.9rem;font-weight:500">(${CONFIG.minStars}~${CONFIG.maxStars}개)</span>`;
     document.getElementById("chips2").innerHTML = state.selected.map((id, k) =>
@@ -1570,16 +1707,22 @@ const CONFIG = {
       ? `<h2>별 정보</h2><p class="empty-info">별을 누르면 여기에 정보가 나와요.</p>`
       : infoHTML(STARS[id]) + (isSel(id) ? "" : `<p class="muted" style="margin:.6rem 0 0">이 별은 지금 선택되어 있지 않아요.</p>`);
   }
+  document.getElementById("pickMore").addEventListener("click", () => {
+    document.getElementById("sky2").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    toast("⭐ 마음에 드는 별을 더 골라 보세요");
+  });
+  document.getElementById("goLook").addEventListener("click", () => go(3));
+
   document.getElementById("chips2").addEventListener("click", e => {
     const b = e.target.closest(".chip"); if (!b) return;
     state.focus[2] = Number(b.dataset.id); renderP2(); skies[2].draw();
   });
-  document.getElementById("shapeIdea").addEventListener("input", e => { state.shape = e.target.value.trim(); });
+  document.getElementById("shapeIdea").addEventListener("input", e => { state.shape = e.target.value.trim(); renderP2(); });
   // 학번·이름 (화면에만 잠시 기억, 어디에도 저장하지 않음)
   state.student = { id: "", name: "" };
   if (!CONFIG.askStudentInfo) document.getElementById("studentBox").hidden = true;
-  document.getElementById("stuId").addEventListener("input", e => { state.student.id = e.target.value.trim(); });
-  document.getElementById("stuName").addEventListener("input", e => { state.student.name = e.target.value.trim(); });
+  document.getElementById("stuId").addEventListener("input", e => { state.student.id = e.target.value.trim(); renderP2(); });
+  document.getElementById("stuName").addEventListener("input", e => { state.student.name = e.target.value.trim(); renderP2(); });
   const whoText = st => [st.id, st.name].filter(Boolean).join(" ");
   document.getElementById("clearSel").addEventListener("click", () => {
     if (!state.selected.length) return;
@@ -1590,6 +1733,8 @@ const CONFIG = {
 
   /* ---------- 4단계: 별 정보 알아보기 ---------- */
   function renderP3() {
+    const mk = document.getElementById("toMake");
+    if (mk) mk.textContent = missingCode(4) ? "🔑 열쇠 코드 입력하고 별자리 만들러 가기" : "별자리 만들러 가기";
     const has = state.selected.length > 0;
     document.getElementById("p3empty").hidden = has;
     document.getElementById("p3main").hidden = !has;
@@ -1598,18 +1743,44 @@ const CONFIG = {
       const s = STARS[id];
       return `<article class="glass card"><span class="order">${k + 1}</span>${infoHTML(s)}<p class="note">${distanceNote(s)}</p></article>`;
     }).join("");
+    const seen = revealedSet();
     document.getElementById("questions").innerHTML = CONFIG.compareQuestions.map((q, i) =>
-      `<div class="q"><p>${esc(q.question)}</p>
-        <div class="answer" id="ans${i}" hidden></div>
-        <button class="btn small reveal" data-i="${i}">정답 보기</button></div>`).join("");
+      `<div class="q${seen.has(i) ? " done" : ""}" id="q${i}"><p>${esc(q.question)}</p>
+        <div class="answer" id="ans${i}"${seen.has(i) ? "" : " hidden"}>${seen.has(i) ? answerHTML(q) : ""}</div>
+        <button class="btn small reveal" data-i="${i}"${seen.has(i) ? " hidden" : ""}>정답 보기</button></div>`).join("");
+    renderCompareState();
+  }
+  function answerHTML(q) {
+    const best = pickBest(state.selected.map(id => STARS[id]), q.key, q.find);
+    return `${esc(best.name)}<small>${esc(q.hint)} · ${esc(fmtKey(q.key, best))}</small>`;
+  }
+  function renderCompareState() {
+    const total = CONFIG.compareQuestions.length, done = revealedSet().size, ok = done >= total;
+    const prog = document.getElementById("cmpProg");
+    prog.classList.toggle("done", ok);
+    const dots = Array.from({ length: total }, (_, k) => k < done ? "<b>★</b>" : "☆").join("");
+    prog.innerHTML = `<span class="dots">${dots}</span><span>${ok ? "비교를 모두 확인했어요!" : `비교 확인 ${done} / ${total} — 모두 확인하면 다음 단계로 갈 수 있어요.`}</span>`;
+    const mk = document.getElementById("toMake");
+    mk.disabled = !ok;
+    mk.textContent = !ok ? "🔒 비교를 모두 확인하면 별자리 만들러 갈 수 있어요"
+      : missingCode(4) ? "🔑 열쇠 코드 입력하고 별자리 만들러 가기" : "별자리 만들러 가기";
+    document.getElementById("cmpNote").textContent = ok ? "" : "위의 '정답 보기'를 모두 눌러 내가 고른 별들을 비교해 보세요.";
+    updateTabs(false);
   }
   document.getElementById("questions").addEventListener("click", e => {
     const b = e.target.closest(".reveal"); if (!b) return;
-    const q = CONFIG.compareQuestions[Number(b.dataset.i)];
-    const best = pickBest(state.selected.map(id => STARS[id]), q.key, q.find);
-    const el = document.getElementById("ans" + b.dataset.i);
-    el.innerHTML = `${esc(best.name)}<small>${esc(q.hint)} · ${esc(fmtKey(q.key, best))}</small>`;
+    const i = Number(b.dataset.i), q = CONFIG.compareQuestions[i];
+    const el = document.getElementById("ans" + i);
+    el.innerHTML = answerHTML(q);
     el.hidden = false; b.hidden = true;
+    document.getElementById("q" + i).classList.add("done");
+    const wasDone = compareDone();
+    revealedSet().add(i);
+    renderCompareState();
+    if (!wasDone && compareDone()) {
+      toast(missingCode(4) ? "🌟 비교 완료! 열쇠 코드를 입력하고 별자리를 만들러 가요" : "🌟 비교 완료! 이제 별자리를 만들러 가요");
+      document.getElementById("toMake").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+    }
   });
   document.getElementById("toMake").addEventListener("click", () => go(4));
 
@@ -1621,6 +1792,34 @@ const CONFIG = {
     renderP4(); skies[4].draw();
   }
   const lineTotal = () => state.strokes.reduce((n, st) => n + Math.max(0, st.length - 1), 0);
+  // 고른 별 중 아직 선으로 이어지지 않은 별
+  const unconnected = () => {
+    const linked = new Set();
+    state.strokes.forEach(st => { if (st.length >= 2) st.forEach(id => linked.add(id)); });
+    return state.selected.filter(id => !linked.has(id));
+  };
+  // 저장 전에 채워야 할 것: 고른 별 모두 잇기, 별자리 이름, 별자리 소개글
+  function saveChecks() {
+    const left = unconnected();
+    return {
+      left,
+      items: [
+        ["고른 별 모두 잇기", left.length === 0],
+        ["별자리 이름 짓기", !!document.getElementById("cName").value.trim()],
+        ["별자리 소개글 쓰기", !!document.getElementById("cIntro").value.trim()]
+      ]
+    };
+  }
+  function renderSaveState() {
+    const { left, items } = saveChecks();
+    const ready = items.every(([, ok]) => ok);
+    const btn = document.getElementById("savePng");
+    btn.disabled = !ready;
+    btn.textContent = ready ? "그림으로 저장하기" : "🔒 아래 항목을 모두 채우면 저장할 수 있어요";
+    document.getElementById("saveNote").innerHTML = ready ? "" :
+      `<ul class="ns-list save-list">${items.map(([t, ok]) => `<li class="${ok ? "ok" : ""}"><span aria-hidden="true">${ok ? "✔" : "☆"}</span>${esc(t)}</li>`).join("")}</ul>` +
+      (left.length ? `<p class="save-left">아직 이어지지 않은 별: <b>${left.map(id => esc(STARS[id].name)).join(", ")}</b></p>` : "");
+  }
   function renderP4() {
     const ok = state.selected.length >= CONFIG.minStars;
     document.getElementById("p4empty").hidden = ok;
@@ -1628,6 +1827,7 @@ const CONFIG = {
     document.getElementById("p4emptyText").textContent =
       `별자리를 만들려면 별을 ${CONFIG.minStars}개 이상 골라야 해요. (지금 ${state.selected.length}개)`;
     if (!ok) return;
+    renderSaveState();
     const last = state.strokes[state.strokes.length - 1];
     document.getElementById("lineCount").textContent =
       `이은 선 ${lineTotal()}개` + (last.length ? ` · 마지막으로 누른 별: ${STARS[last[last.length - 1]].name}` : " · 첫 별을 눌러 시작하세요");
@@ -1642,6 +1842,7 @@ const CONFIG = {
     mk.hidden = !CONFIG.askStudentInfo;
     mk.textContent = who ? `만든 사람: ${who}` : `학번과 이름은 '${CONFIG.tabNames[1]}'에서 적을 수 있어요.`;
   }
+  document.getElementById("introMust").textContent = CONFIG.introRequirement || "";
   const introBox = document.getElementById("cIntro");
   const introCount = () => { document.getElementById("introCount").textContent = `${introBox.value.length} / 300`; };
   document.getElementById("starters").innerHTML = CONFIG.introStarters.map((t, i) =>
@@ -1652,12 +1853,13 @@ const CONFIG = {
     const v = introBox.value;
     const add = (v && !/\s$/.test(v) ? " " : "") + t;
     if (v.length + add.length > 300) { toast("소개글은 300자까지 쓸 수 있어요"); return; }
-    introBox.value = v + add; introCount();
+    introBox.value = v + add; introCount(); renderSaveState();
     introBox.focus();
     const k = introBox.value.indexOf("___", v.length);
     if (k >= 0) introBox.setSelectionRange(k, k + 3);   // 첫 빈칸을 바로 고쳐 쓸 수 있게 선택
   });
-  introBox.addEventListener("input", introCount);
+  introBox.addEventListener("input", () => { introCount(); renderSaveState(); });
+  document.getElementById("cName").addEventListener("input", renderSaveState);
   introCount();
 
   document.getElementById("undo").addEventListener("click", () => {
@@ -1743,6 +1945,7 @@ const CONFIG = {
 
   document.getElementById("savePng").addEventListener("click", async () => {
     if (lineTotal() === 0) { toast("먼저 별을 이어 별자리를 만들어 주세요"); return; }
+    if (!saveChecks().items.every(([, ok]) => ok)) { toast("별 잇기, 별자리 이름, 소개글을 모두 채워 주세요"); renderSaveState(); return; }
     if (CONFIG.askStudentInfo && (!state.student.id || !state.student.name)) {
       toast(`'${CONFIG.tabNames[1]}'에서 학번과 이름을 먼저 적어 주세요`); return;
     }
@@ -1867,6 +2070,39 @@ const CONFIG = {
   }));
   document.querySelectorAll(".go-pick").forEach(b => b.addEventListener("click", () => go(2)));
 
+  /* ---------- 열쇠 코드 입력 창 ---------- */
+  const codeDialog = document.getElementById("codeDialog");
+  const codeInput = document.getElementById("codeInput"), codeMsg = document.getElementById("codeMsg");
+  const normCode = t => String(t).replace(/\s+/g, "").toLowerCase();
+  let codeFor = 0, codeGoTo = 0, codeBack = null;
+  function openCodeDialog(k, target) {
+    codeFor = k; codeGoTo = target; codeBack = document.activeElement;
+    document.getElementById("codeDesc").textContent =
+      `'${CONFIG.tabNames[k - 1] || k + "단계"}' 단계로 넘어가려면 선생님이 알려 주시는 열쇠 코드를 입력하세요.`;
+    codeInput.value = ""; codeMsg.textContent = ""; codeMsg.className = "code-msg";
+    codeDialog.hidden = false; codeInput.focus();
+  }
+  function closeCodeDialog() { codeDialog.hidden = true; if (codeBack && codeBack.focus) codeBack.focus(); }
+  function checkCode() {
+    if (!codeInput.value.trim()) { codeMsg.textContent = "열쇠 코드를 입력해 주세요."; return; }
+    if (normCode(codeInput.value) === normCode(codeOf(codeFor))) {
+      state.codeOk[codeFor] = true;
+      codeMsg.className = "code-msg ok"; codeMsg.textContent = "열렸어요!";
+      updateTabs(true);
+      setTimeout(() => { codeDialog.hidden = true; toast("🔓 '" + (CONFIG.tabNames[codeFor - 1] || "") + "' 단계가 열렸어요"); go(codeGoTo); }, 450);
+    } else {
+      codeMsg.className = "code-msg"; codeMsg.textContent = "코드가 맞지 않아요. 다시 확인해 보세요.";
+      const box = codeDialog.querySelector(".code-box");
+      box.classList.remove("shake"); void box.offsetWidth; box.classList.add("shake");
+      codeInput.select();
+    }
+  }
+  document.getElementById("codeOk").addEventListener("click", checkCode);
+  document.getElementById("codeCancel").addEventListener("click", closeCodeDialog);
+  codeInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.isComposing) { e.preventDefault(); checkCode(); } });
+  codeDialog.addEventListener("click", e => { if (e.target === codeDialog) closeCodeDialog(); });
+  document.addEventListener("keydown", e => { if (e.key === "Escape" && !codeDialog.hidden) closeCodeDialog(); });
+
   const tabs = document.querySelectorAll(".tab");
   function updateTabs(justUnlocked) {
     tabs.forEach(t => {
@@ -1875,15 +2111,24 @@ const CONFIG = {
       t.classList.toggle("locked", locked);
       t.setAttribute("aria-disabled", String(locked));
       let lock = t.querySelector(".lock");
-      if (locked && !lock) { lock = document.createElement("span"); lock.className = "lock"; lock.textContent = "🔒"; lock.setAttribute("aria-label", "잠김"); t.appendChild(lock); }
+      if (locked && !lock) { lock = document.createElement("span"); lock.className = "lock"; t.appendChild(lock); }
+      if (locked) {
+        const byCode = !missionLocked(n) && !pickLocked(n) && !compareLocked(n);   // 앞 단계는 다 했고 코드만 남은 경우
+        lock.textContent = byCode ? "🔑" : "🔒";
+        lock.setAttribute("aria-label", byCode ? "열쇠 코드 필요" : "잠김");
+      }
       if (!locked && lock) lock.remove();
-      if (justUnlocked && n >= 2) t.classList.add("unlocked-now");
+      if (justUnlocked && n >= 2 && !locked && !galleryFree(n)) t.classList.add("unlocked-now");
     });
   }
   tabs.forEach(t => t.addEventListener("click", () => go(Number(t.dataset.page))));
 
   function go(n) {
-    if (isLocked(n)) { toast("🔒 탐색 미션을 모두 성공하면 열려요"); return; }
+    if (missionLocked(n)) { toast("🔒 탐사 미션을 모두 성공하면 열려요"); return; }
+    if (!pickLocked(n) && compareLocked(n)) { toast(`🔒 '${CONFIG.tabNames[2]}'에서 '내가 고른 별 비교하기'를 모두 확인하면 열려요`); return; }
+    if (pickLocked(n)) { toast(`🔒 '${CONFIG.tabNames[1]}'에서 다음을 채우면 열려요: ${missingPrep().join(", ")}`); return; }
+    const need = missingCode(n);
+    if (need) { openCodeDialog(need, n); return; }
     state.page = n;
     tabs.forEach(t => t.setAttribute("aria-selected", String(Number(t.dataset.page) === n)));
     document.querySelectorAll(".page").forEach(p => p.classList.toggle("active", p.id === "page" + n));
