@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>나만의 별자리 탐색하기 - 가을 밤하늘 (패들렛 전시회 v23)</title>
+<title>나만의 별자리 탐색하기 - 가을 밤하늘 (패들렛 안내 수정 v24)</title>
 
 <script>
 /* =====================================================================
@@ -916,7 +916,7 @@ const CONFIG = {
         <ol class="expo-steps">
           <li>'<span class="tabref" data-i="3"></span>'에서 <b>그림으로 저장하기</b>를 눌러 내 별자리 그림을 저장해요.</li>
           <li>선생님이 화면에 띄워 주는 <b>코드(또는 QR 코드)</b>를 보고 패들렛에 들어가요.</li>
-          <li>패들렛에 저장한 별자리 그림을 올리고, 제목에 <b>별자리 이름</b>을, 내용에 <b>별자리 소개글</b>을 적어요.</li>
+          <li>패들렛에 저장한 별자리 그림을 올리고, 제목에 <b>학번과 이름</b>을, 내용에는 <b>별자리 이름</b>을 적어요.</li>
           <li>친구들의 별자리를 감상하고, 마음에 드는 작품에 댓글로 응원을 남겨요.</li>
         </ol>
       </div>
@@ -930,11 +930,11 @@ const CONFIG = {
           <img id="mineImg" alt="내가 저장한 별자리 그림">
           <p class="mine-name" id="mineName"></p>
           <div class="btn-row">
+            <button class="btn" id="copyWho" type="button">학번·이름 복사</button>
             <button class="btn" id="copyTitle" type="button">별자리 이름 복사</button>
-            <button class="btn" id="copyIntro" type="button">소개글 복사</button>
             <button class="btn primary" id="saveAgain" type="button">그림 다시 저장</button>
           </div>
-          <p class="mine-tip">패들렛에 글을 쓸 때 복사 버튼을 누른 뒤 붙여 넣으면 편해요.</p>
+          <p class="mine-tip">패들렛 제목에는 학번·이름을, 내용에는 별자리 이름을 복사해 붙여 넣으면 편해요.</p>
         </div>
       </div>
     </div>
@@ -2038,7 +2038,7 @@ const CONFIG = {
     document.getElementById("mineImg").src = d.src;
     const who = whoText({ id: d.sid || "", name: d.sname || "" });
     document.getElementById("mineName").textContent = d.name + (who ? ` · ${who}` : "");
-    document.getElementById("copyIntro").disabled = !d.intro;
+    document.getElementById("copyWho").disabled = !who;
   }
   async function copyText(t, what) {
     try { await navigator.clipboard.writeText(t); toast(`📋 ${what} 복사했어요`); }
@@ -2047,7 +2047,11 @@ const CONFIG = {
     }
   }
   document.getElementById("copyTitle").addEventListener("click", () => state.lastDrawing && copyText(state.lastDrawing.name, "별자리 이름을"));
-  document.getElementById("copyIntro").addEventListener("click", () => state.lastDrawing && state.lastDrawing.intro && copyText(state.lastDrawing.intro, "소개글을"));
+  document.getElementById("copyWho").addEventListener("click", () => {
+    const d = state.lastDrawing; if (!d) return;
+    const who = whoText({ id: d.sid || "", name: d.sname || "" });
+    if (who) copyText(who, "학번과 이름을");
+  });
   document.getElementById("saveAgain").addEventListener("click", () => {
     const d = state.lastDrawing; if (!d) return;
     const a = document.createElement("a");
